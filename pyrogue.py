@@ -40,8 +40,8 @@ async def main():
     
         
     while True:
-        # input("---")
-        await asyncio.sleep(1)
+        input("---")
+        await asyncio.sleep(0)
         await queue.put("SALUT")
         await queue.put("SALUT")
 

@@ -5,7 +5,7 @@ async def main():
     while True:
         await queue.get()
         print("bot2 cycle")
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0)
     
 
 
