@@ -1,54 +1,52 @@
 import asyncio
+import subprocess
+import time
 
-# empty, player1, player2, bullet
-assets =  ["_", '1', '2', 'x']
-
-
-
-
-class Map:
-    def __init__(self, height, width):
-        self.height = height
-        self.width = width
-        self.map = [[0 for _ in range(width)] for i in range(height)]
-    
-    def print(self):
-        for i in range(self.height):
-            for j in range(self.width):
-                print(assets[self.map[i][j]], end = " ")
-            print()
+import redis
 
 
+def run_script(script_name):
+    return subprocess.Popen(["python", script_name], shell=False)
 
-class Player:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.hp = 10
+# timeout in s between bot cycles
+TIMEOUT = 100
+
+
+# proc1.kill()
+# proc1.wait()
+
+# proc2.kill()
+# proc2.wait()
 
 
 async def main():
+    r = redis.Redis(host='localhost', port=6379, db=0)
     bot1_code = open("bot1.py").read()
     bot2_code = open("bot2.py").read()
 
-    queue = asyncio.Queue()
+    
+    proc1 = run_script("bot1.py")
+    # proc2 = run_script("bot2.py")
+
+    pubsub = r.pubsub()
+    pubsub.subscribe('bot1')
     
     
-    exec(bot1_code, locals())
-    exec(bot2_code, locals())
-    
-    
-        
-    while True:
+    round = 0
+    for _ in range(10):
         input("---")
-        await asyncio.sleep(0)
-        await queue.put("SALUT")
-        await queue.put("SALUT")
+        round += 1
+
+        r.publish('cycle', f'{round}')
+        await asyncio.sleep(0.5)
+        
+        message = pubsub.get_message()
+        # print("got message", message['data'])
+    
+    r.publish('cycle', 'STOP')
 
 
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-        
-    
