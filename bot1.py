@@ -23,26 +23,21 @@ pubsub.subscribe('cycle')
 
 
 def move():
-    print("move")
-    wait(1)
+    wait(2)
     r.publish('bot1', 'move')
 
 def shoot():
-    print("shoot")
     wait(1)
     r.publish('bot1', 'shoot')
 
 def rotate():
-    print("rotate")
     wait(1)
     r.publish('bot1', 'rotate')
 
 
 
 while True:
-
     move()
-
     shoot()
-
+    time.sleep(2)
     rotate()

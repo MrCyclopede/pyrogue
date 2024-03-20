@@ -1,15 +1,17 @@
 import asyncio
 import subprocess
 import time
+import signal
+import sys
 
 import redis
 
 
 def run_script(script_name):
-    return subprocess.Popen(["python", script_name], shell=False)
+    return subprocess.Popen(["python3", script_name], shell=False)
 
-# timeout in s between bot cycles
-TIMEOUT = 100
+# timeout in s
+TIMEOUT = 0.5
 
 
 # proc1.kill()
@@ -20,9 +22,9 @@ TIMEOUT = 100
 
 
 async def main():
+
     r = redis.Redis(host='localhost', port=6379, db=0)
-    bot1_code = open("bot1.py").read()
-    bot2_code = open("bot2.py").read()
+    
 
     
     proc1 = run_script("bot1.py")
@@ -32,18 +34,39 @@ async def main():
     pubsub.subscribe('bot1')
     
     
+    def exit_gracefully(signal, frame):
+        proc1.kill()
+        proc1.wait()
+        sys.exit(0)
+    signal.signal(signal.SIGINT, exit_gracefully)
+
+
+
     round = 0
-    for _ in range(10):
+    while True:
         input("---")
+        # print("===")
         round += 1
 
         r.publish('cycle', f'{round}')
-        await asyncio.sleep(0.5)
         
-        message = pubsub.get_message()
-        # print("got message", message['data'])
+        
+        message = None
+        round_start = time.time()
+        print( time.time() - round_start)
+        while (message == None or message['type'] != 'message'):
+            
+                # break
+
+            message = pubsub.get_message()
+            if time.time() - round_start > TIMEOUT:
+                print("TIMEOUT")
+            time.sleep(0.1)
+
+        print("bot1:", message)
     
-    r.publish('cycle', 'STOP')
+    
+    exit_gracefully()
 
 
 
