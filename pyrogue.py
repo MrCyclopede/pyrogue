@@ -13,63 +13,84 @@ def run_script(script_name):
 # timeout in s
 TIMEOUT = 0.5
 
+r = redis.Redis(host='localhost', port=6379, db=0)
 
-# proc1.kill()
-# proc1.wait()
+def all_processes_done(processes):
+    for k,v in processes.items():
+        if not v['done']:
+            return False
+    else:
+        return True
 
-# proc2.kill()
-# proc2.wait()
 
-
-async def main():
-
-    r = redis.Redis(host='localhost', port=6379, db=0)
-    
-
-    
-    proc1 = run_script("bot1.py")
-    # proc2 = run_script("bot2.py")
-
+def run_game(players):
+    processes = {}
     pubsub = r.pubsub()
-    pubsub.subscribe('bot1')
+
+    for player_name in players:
+        p = run_script(f"{player_name}.py")
+        processes[player_name] = {'done': False, 'p_handle': p}
+        pubsub.subscribe(f'{player_name}')
+
+    print(processes)
+
     
-    
-    def exit_gracefully(signal, frame):
-        proc1.kill()
-        proc1.wait()
+    def kill_all_bots():
+        for p_name,p in processes.items():
+            
+            p['p_handle'].kill()
+            p['p_handle'].wait()
+            print(f"killed {p_name}")
         sys.exit(0)
-    signal.signal(signal.SIGINT, exit_gracefully)
+        
+
+    def signal_handler(signal, frame):
+        kill_all_bots()
+        
+
+    signal.signal(signal.SIGINT, signal_handler)
 
 
-
+    #let time for processes to start and connect to redis
+    time.sleep(0.1)
     round = 0
     while True:
-        input("---")
-        # print("===")
+        # input("---")
+        print("===")
         round += 1
 
-        r.publish('cycle', f'{round}')
+        for i,_ in enumerate(processes):
+            r.publish(f'cycle{i + 1}', f'{round}')
         
         
         message = None
-        round_start = time.time()
-        print( time.time() - round_start)
-        while (message == None or message['type'] != 'message'):
+        cycle_start = time.time()
+
+        while not all_processes_done(processes):
             
-                # break
+            while (message == None or message['type'] != 'message'):
+                if time.time() - cycle_start > TIMEOUT:
+                    for p in processes:
+                        if not p: 
+                            print("bot1", end="")
+                    print("TIMEOUT")
+                    kill_all_bots()
 
-            message = pubsub.get_message()
-            if time.time() - round_start > TIMEOUT:
-                print("TIMEOUT")
-            time.sleep(0.1)
+                message = pubsub.get_message()
+            else:
+                processes[message['channel'].decode()]['done'] = True
+                print(message['channel'].decode(), message['data'].decode())
+                message = None
 
-        print("bot1:", message)
+        for p,v in processes.items():
+            v['done'] = False
+
+    kill_all_bots()
     
-    
-    exit_gracefully()
 
-
-
+def main():
+    run_game(["bot1", "bot2"])
+   
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

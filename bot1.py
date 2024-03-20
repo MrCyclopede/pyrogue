@@ -1,5 +1,4 @@
 import time
-
 import redis
 
 r = redis.Redis(host='localhost', port=6379, db=0)
@@ -11,15 +10,14 @@ def wait(cycles):
         message = None
         while message == None or message['type'] != 'message':
             message = pubsub.get_message()
-            time.sleep(0.1)
         if cycles > 1:
-            r.publish('bot1', f"wait")
+            r.publish('bot1', f"wait {message['data'].decode()}")
         cycles -= 1
 
             
             
 pubsub = r.pubsub()
-pubsub.subscribe('cycle')
+pubsub.subscribe('cycle1')
 
 
 def move():
@@ -39,5 +37,5 @@ def rotate():
 while True:
     move()
     shoot()
-    time.sleep(2)
+    time.sleep(0.499)
     rotate()

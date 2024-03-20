@@ -1,16 +1,40 @@
-import asyncio
-
+import time
 import redis
 
+r = redis.Redis(host='localhost', port=6379, db=0)
 
-async def subscribe_to_channel():
-    r = redis.Redis(host='localhost', port=6379, db=0)
-    pubsub = r.pubsub()
-    pubsub.subscribe('cycle')
-    while True:
-        message = pubsub.get_message()
-        if message:
-            print(f"Subscriber 2 received message: {message['data']}")
+def wait(cycles):
+    
+    
+    while cycles > 0:
+        message = None
+        while message == None or message['type'] != 'message':
+            message = pubsub.get_message()
+        if cycles > 1:
+            r.publish('bot2', f"wait")
+        cycles -= 1
 
-# Example usage
-asyncio.run(subscribe_to_channel())
+            
+            
+pubsub = r.pubsub()
+pubsub.subscribe('cycle2')
+
+
+def move():
+    wait(2)
+    r.publish('bot2', 'move')
+
+def shoot():
+    wait(1)
+    r.publish('bot2', 'shoot')
+
+def rotate():
+    wait(1)
+    r.publish('bot2', 'rotate')
+
+
+
+while True:
+    move()
+    shoot()
+    rotate()
