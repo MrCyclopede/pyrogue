@@ -6,50 +6,66 @@ import sys
 from abc import ABC, abstractmethod
 import redis
 
-class GameState:
-    def __init__(self, player_list):
-        self.arena = Arena()
-        self.players = []
-
-        for player in player_list:
-            bot = PlayerBot(player, 0 + len(self.players * 2), 0, 1, 10)
-            self.players.append(bot)
-            self.arena.summon_player(bot)
-
-        self.arena.print()
-
-
 # Move 
 # Scan -/ 
 # Summon
 # tick 
 # wait
 
-# class Spell(ABC):
-#     @abstractmethod
-#     def cast(self):
-#         pass
+class Spell(ABC):
+    @abstractmethod
+    def cast(self):
+        pass
 
-# class MoveSpell(Spell, ABC):
-#     pass
+class MoveSpell(Spell, ABC):
+    def __init__(self, arena, summonable,  distance, cycle_duration):
+        self.arena = arena
+        self.summonable = summonable
+        self.distance = distance
+        self.cycle_duration = cycle_duration
 
-# class simple_move(MoveSpell):
-#     pass
+    
+    def free_landing_cell(self, x, y):
+        if self.summonable.x < 0 or self.summonable.x > self.arena.width - 1 or self.summonable.y < 0 or self.summonable.y > self.arena.height - 1:
+            return False
+        return self.arena.map[y][x] == None
+        
 
-# class strafe(MoveSpell):
-#     pass
+class SimpleMove(MoveSpell):
+    def __init__(self, arena, summonable, distance, cycle_duration):
+        super().__init__(arena, summonable, distance, cycle_duration)
+
+    def cast(self):
+        direction = self.summonable.direction
+        if direction == 1:
+            target_x = self.summonable.x
+            target_y = self.summonable.y - 1
+        elif direction == 2:
+            target_x = self.summonable.x + 1
+            target_y = self.summonable.y
+        elif direction == 3:
+            target_x = self.summonable.x 
+            target_y = self.summonable.y + 1
+        elif direction == 4:
+            target_x = self.summonable.x - 1
+            target_y = self.summonable.y
+        else:
+
+            print("Invalid direction", self.summonable.direction)
+            return False
+
+        if not self.free_landing_cell(target_x, target_y):
+            print("Cell is not free", target_x, target_y)
+            return False
+        else:
+            self.summonable.move(target_x, target_y)
+            return True
 
 
-def simple_move(self, summonable, arena):
-    direction = self.summonable.direction
-    if direction == 1 and self.summonable.y > 0:
-        self.summonable.y -= 1
-    elif direction == 2 and self.summonable.x < self.arena.width - 1:
-        self.summonable.x += 1
-    elif direction == 3 and self.summonable.y < self.arena.height - 1:
-        self.summonable.y += 1
-    elif direction == 4 and self.summonable.x > 0:
-        self.summonable.x -= 1
+class Strafe(MoveSpell):
+    pass
+
+
     
 class SummonSpell(Spell, ABC):
     def __init__(self, summonable):
@@ -81,15 +97,17 @@ class Summonable(ABC):
     def tick(self):
         pass
     
-    @abstractmethod
-    def move(self):
-        pass
+    def move(self, x, y):
+        self.arena.map[self.y][self.x] = None
+        self.x = x
+        self.y = y
+        self.arena.map[self.y][self.x] = self
     
-    @abstractmethod
+    # @abstractmethod
     def scan(self):
         pass
     
-    @abstractmethod
+    # @abstractmethod
     def summon(self):
         pass
 
@@ -97,8 +115,8 @@ class Summonable(ABC):
         pass
 
 class PlayerBot(Summonable):
-    def __init__(self, name, x, y, direction, max_hp):
-        super().__init__(name, x, y, max_hp)
+    def __init__(self, name, x, y, direction, max_hp, arena):
+        super().__init__(name, x, y, max_hp, arena)
         self.direction = direction
 
     def tick(self):
@@ -109,7 +127,7 @@ class Arena:
     def __init__(self, width=8, height=8):
         self.width = width
         self.height = height
-        self.map = [["_" for _ in range(width)] for _ in range(height)]
+        self.map = [[None for _ in range(width)] for _ in range(height)]
         self.summoned_objects = []
 
     def tick(self):
@@ -119,7 +137,10 @@ class Arena:
     def print(self):
         for row in self.map:
             for cell in row:
-                print(cell, end="")
+                if cell == None:
+                    print("_", end="")
+                else:
+                    print(cell, end="")
             print()
 
 
@@ -130,12 +151,29 @@ class Arena:
         else:
             raise TypeError("Object must be of type Summonable")
 
-    
+
+class GameState:
+    def __init__(self, player_list):
+        self.arena = Arena()
+        self.players = []
+
+        for player in player_list:
+            bot = PlayerBot(player, 0 + len(self.players * 2), 0, 3, 10, self.arena)
+            self.players.append(bot)
+            self.arena.summon_player(bot)
+        
+
+    def run(self):
+        simple_move = SimpleMove(self.arena, self.players[0], 1, 1)
+        print("simple move returns:", simple_move.cast())
+        
+
 
 game = GameState(["bot1", "bot2"])
+game.arena.print()
+game.run()
+game.arena.print()
 
-
-# print(a)
 sys.exit()
 
 
