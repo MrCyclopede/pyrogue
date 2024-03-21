@@ -4,8 +4,6 @@ import redis
 r = redis.Redis(host='localhost', port=6379, db=0)
 
 def wait(cycles):
-    
-    
     while cycles > 0:
         message = None
         while message == None or message['type'] != 'message':
@@ -27,15 +25,24 @@ def move():
 def shoot():
     wait(1)
     r.publish('bot1', 'shoot')
+    
 
 def rotate():
     wait(1)
     r.publish('bot1', 'rotate')
 
+def player_wait():
+    wait(1)
+    r.publish('bot1', 'wait')
+
 
 
 while True:
+
     move()
+
+    time.sleep(0.5)
     shoot()
-    time.sleep(0.499)
+    player_wait()
+    
     rotate()
