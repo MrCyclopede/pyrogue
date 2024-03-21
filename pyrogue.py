@@ -22,7 +22,9 @@ class MoveSpell(Spell, ABC):
         self.arena = arena
         self.summonable = summonable
         self.distance = distance
-        self.cycle_duration = cycle_duration
+        self.wait_before_cast = cycle_duration
+        self.wait_after_cast = cycle_duration
+
 
     
     def free_landing_cell(self, x, y):
@@ -63,6 +65,9 @@ class SimpleMove(MoveSpell):
 
 
 class Strafe(MoveSpell):
+    pass
+
+class QuickMove(MoveSpell):
     pass
 
 
